@@ -1,9 +1,11 @@
 var gestureLine = gestureLine || {};
+var THREE = THREE || {};
 
 gestureLine.angleLengthLineMorpher = (function() {
 	'use strict';
-	var angleLengthLineMorpherClass = function (nPtsToRecord, x, y) {
+	var angleLengthLineMorpherClass = function (nPtsToRecord, pNumLines, x, y) {
 		this.numPoints = nPtsToRecord;
+		this.numLines = pNumLines;
 
 		this.anglePtsPresents = [];
 		this.anglePtsTargets = [];
@@ -14,31 +16,74 @@ gestureLine.angleLengthLineMorpher = (function() {
 		this.rightDownControlPts = [];
 		this.leftUpControlPts = [];
 		this.leftDownControlPts = [];
-		this.centroid = new gestureLine.gesturePoint();
-		this.centroidOffsetCatch = new gestureLine.gesturePoint();
+		this.centroid = new THREE.Vector3();
+		this.centroidOffsetCatch = new THREE.Vector3();
 
-		for (var i = 0; i < this.numPoints; i++) {
-			this.anglePtsPresents[i] = new gestureLine.anglePoint();
-			this.anglePtsTargets[i] = new gestureLine.anglePoint();
-			this.anglePtsDiffs[i] = new gestureLine.anglePoint();
-			this.pts[i] = new gestureLine.gesturePoint();
-			this.rightUpControlPts[i] = new gestureLine.gesturePoint();
-			this.rightDownControlPts[i] = new gestureLine.gesturePoint();
-			this.leftUpControlPts[i] = new gestureLine.gesturePoint();
-			this.leftDownControlPts[i] = new gestureLine.gesturePoint();
-		}
-
-		this.gp0 = new gestureLine.gesturePoint();
-		this.gp1 = new gestureLine.gesturePoint();
-		this.p0 = new gestureLine.gesturePoint();
-		this.p1 = new gestureLine.gesturePoint();
-		this.pOrig = new gestureLine.gesturePoint();
+		this.gp0 = new THREE.Vector3();
+		this.gp1 = new THREE.Vector3();
+		this.p0 = new THREE.Vector3();
+		this.p1 = new THREE.Vector3();
+		this.pOrig = new THREE.Vector3();
 		this.gp0.x = x;
 		this.gp0.y = y;
 		this.lineLength = 1.1;
 		this.angleTotalBack = 0;
 		this.angleTotalForw = 0;
 		this.firstCall = true;
+		
+		this.curve = new THREE.SplineCurve();
+
+		for (var i = 0; i < this.numPoints; i++) {
+			this.anglePtsPresents[i] = new gestureLine.anglePoint();
+			this.anglePtsTargets[i] = new gestureLine.anglePoint();
+			this.anglePtsDiffs[i] = new gestureLine.anglePoint();
+			this.pts[i] = new THREE.Vector3();
+			this.rightUpControlPts[i] = new THREE.Vector3();
+			this.rightDownControlPts[i] = new THREE.Vector3();
+			this.leftUpControlPts[i] = new THREE.Vector3();
+			this.leftDownControlPts[i] = new THREE.Vector3();
+		}
+
+		this.meshes = [];
+		this.shaderAttrs = [];
+		this.shaderUniforms = [];
+		//this.materials = [];
+		var vsText = document.getElementById( 'vertexshader' ).textContent;
+		var fsText = document.getElementById( 'fragmentshader' ).textContent;
+		for (var j=0; j<this.numLines; j++) {
+			var geometry = new THREE.Geometry();
+			geometry.dynamic = true;
+			var attrs = {
+				aPosition: {type: 'v3', value: []},
+				displacement: {type: 'v3', value: []},
+				customColor: {type: 'c', value: []}
+			};
+			var uniforms = {
+				amplitude: { type: 'f', value: 1.0 },
+				opacity: { type: 'f', value: 0.3 },
+				color: {type: 'c', value: new THREE.Color(0x000000)}
+			};
+			var material = new THREE.ShaderMaterial( {
+				uniforms: uniforms,
+				attributes: attrs,
+				vertexShader: vsText,
+				fragmentShader: fsText,
+				depthTest: false,
+				tranparent: true
+			} );
+			material.lineWidth = 1;
+			for (var k = 0; k < this.numPoints; k++) {
+				geometry.vertices.push( new THREE.Vector3( 0, 0, 1 ) );
+				attrs.aPosition.value[k] = new THREE.Vector3( 0, 0, 1 );
+				attrs.displacement.value[k] = new THREE.Vector3( );
+				attrs.customColor.value[k] = new THREE.Color( 0x000000 );
+			}
+			var mesh = new THREE.Line( geometry, material, THREE.LineStrip );
+			this.shaderAttrs.push(attrs);
+			this.shaderUniforms.push(uniforms);
+			this.meshes.push(mesh);
+		}
+
 		this.clear();
 	};
 
@@ -71,7 +116,7 @@ gestureLine.angleLengthLineMorpher = (function() {
 		}
 
 		this.totalTimeMillis = Math.max(totalDiff * 35, 750);
-		this.ptCount = this.numPoints - 2;
+		this.ptCount = this.numPoints;
 	};
 
 	proto.draw = function (x, y) {
@@ -92,7 +137,6 @@ gestureLine.angleLengthLineMorpher = (function() {
 			this.calcCentroid(x,y);
 		}
 
-		
 		this.drawPoints();
 		this.firstCall = false;
 	};
@@ -133,10 +177,10 @@ gestureLine.angleLengthLineMorpher = (function() {
 			this.pts[i].x = 0.95 * this.pts[i].x + 0.05 * this.p1.x;
 			this.pts[i].y = 0.95 * this.pts[i].y + 0.05 * this.p1.y;
 
-			this.p0.setPos(this.p1.x, this.p1.y);
+			this.p0.set(this.p1.x, this.p1.y, 1);
 		}
 
-		this.gp1.setPos(this.p1.x, this.p1.y);
+		this.gp1.set(this.p1.x, this.p1.y, 1);
 		this.angleTotalBack = Math.atan2(this.p1.y - this.p0.y, this.p1.x - this.p0.x);
 		//var angleNotLevel = Math.atan2(this.p1.y - this.pOrig.y, this.p1.x - this.pOrig.x);
 		//this.angleToBeLevel = -angleNotLevel;
@@ -167,15 +211,27 @@ gestureLine.angleLengthLineMorpher = (function() {
 	};
 
 	proto.drawPoints = function() {
+		var time = Date.now() * 0.001;
 		if (this.ptCount <= 0) {return;}
 
-		gestureLine.main.getContext().beginPath();
-		for (var i=0; i<this.ptCount-1; i++) {
-			gestureLine.main.getContext().moveTo(this.pts[i].x, this.pts[i].y);
-			gestureLine.main.getContext().lineTo(this.pts[i+1].x, this.pts[i+1].y);
-		}
-		gestureLine.main.getContext().stroke();
+		for (var j=0; j<this.numLines; j++) {
+			var attrs = this.shaderAttrs[j];
+			var uniform = this.shaderUniforms[j];
 
+			uniform.amplitude.value = 1;// * Math.sin( 0.5 * time );
+			uniform.color.value.offsetHSL( 0.0005, 0, 0 );
+
+			for (var i=0; i<this.ptCount; i++) {
+				var displacementF = 1 - Math.abs(i / this.ptCount * 2 - 1);
+				var nx = ( j * displacementF ) * ( 0.5 - Math.random() );
+				var ny = ( j * displacementF ) * ( 0.5 - Math.random() );
+				var nz = ( j * 0.2 ) * ( 0.5 - Math.random() );
+				attrs.displacement.value[i].set( nx, ny, nz );
+				attrs.aPosition.value[i].set(-this.pts[i].x * 2, -this.pts[i].y *2, 1);
+			}
+			attrs.displacement.needsUpdate = true;
+			attrs.aPosition.needsUpdate = true;
+		}
 	};
 
 	return angleLengthLineMorpherClass;

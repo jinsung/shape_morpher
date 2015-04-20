@@ -3,6 +3,7 @@ body {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   overflow:hidden;
   color: #333;
+  margin: 0px;
 }
 
 .hero-unit {

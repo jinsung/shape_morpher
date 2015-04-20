@@ -1,107 +1,151 @@
 var gestureLine = gestureLine || {};
+var THREE = THREE || {};
 
 gestureLine.main = (function() {
   'use strict';
   var scope;
-  var context;
-  var canvas;
   var pointRecorder;
-  var pointRecorderBuf;
   var angleLine;
   var angleLineMorpher;
   var numAnglePoints;
+  var numLines;
   var isMouseDown;
   var date;
+
+  var canvasWidth;
+  var canvasHeight;
+
+  // threejs
+  var container;
+  var camera;
+  var scene;
+  var renderer;
+
+  var vertexShaderText;
+  var fragmentShaderText;
+
+  var isCameraPersp = false;
 
   return {
     init: function () {
       scope = this;
       date = new Date();
+      canvasWidth = window.innerWidth;
+      canvasHeight = window.innerHeight;
       numAnglePoints = 250;
-      pointRecorderBuf = new gestureLine.pointRecorder (numAnglePoints*4);
+      numLines = 20;
+
       pointRecorder = new gestureLine.pointRecorder (numAnglePoints);
       angleLine = new gestureLine.angleLengthLine(numAnglePoints);
-      angleLineMorpher = new gestureLine.angleLengthLineMorpher(numAnglePoints, 100, 100);
+      angleLineMorpher = new gestureLine.angleLengthLineMorpher(numAnglePoints, numLines, 100, 100);
 
-      canvas = document.getElementById('mainCanvas');
-      context = canvas.getContext('2d');
+      container = document.createElement('div');
+      document.body.appendChild( container );
 
-      var initLength = 30;
+      if (isCameraPersp) {
+        camera = new THREE.PerspectiveCamera( 60, canvasWidth / canvasHeight, 1, 1000 );  
+      } else {
+        camera = new THREE.OrthographicCamera( canvasWidth / - 2, canvasWidth / 2, canvasHeight / 2, canvasHeight / - 2, 0.1, 1000 );
+      }
+      scene = new THREE.Scene();
+      scene.add(camera);
+      camera.position.set(0, 0, -100);
+      camera.lookAt( scene.position );
+
+      scene.add( new THREE.AmbientLight( 0x404040 ) );
+
+      renderer = new THREE.WebGLRenderer( {antialias: true} );
+      renderer.setClearColor ( 0xf0f0f0 );
+      renderer.setPixelRatio ( window.devicePixelRatio );
+      renderer.setSize( canvasWidth, canvasHeight );
+      container.appendChild(renderer.domElement);
+
+      vertexShaderText = document.getElementById( 'vertexshader' ).textContent;
+      fragmentShaderText = document.getElementById( 'fragmentshader' ).textContent;
+
       var radius = 100;
       var offset = 100;
-      for (var i = 0; i < initLength; i++) {
-        var div = (i/(initLength-1)) * (Math.PI * 2.0);
-        pointRecorderBuf.addPoint(offset + Math.cos(div)*radius, 
+      for (var i = 0; i < numAnglePoints; i++) {
+        var div = (i/(numAnglePoints-1)) * (Math.PI * 2.0);
+        pointRecorder.addPoint(offset + Math.cos(div)*radius, 
           offset+Math.sin(div)*radius);
-
-        if (pointRecorderBuf.pointCounter > 4) {
-          pointRecorder.resampleIntoMe(pointRecorderBuf, numAnglePoints);
-        } 
       }
 
-      for (var j=0; j<numAnglePoints; j++) {
-
-      }
+      gestureLine.main.sendPoints();
+      gestureLine.main.sendPoints();
 
       pointRecorder.clear();
-      pointRecorderBuf.clear();
+      scene.add(pointRecorder.mesh);
+      for (var j=0; j<numLines; j++) {
+        scene.add(angleLineMorpher.meshes[j]);
+      }
 
       isMouseDown = false;
-      canvas.addEventListener('mousedown', gestureLine.main.onMouseDown, false);
-      canvas.addEventListener('touchstart', gestureLine.main.onMouseDown, false);
-      canvas.addEventListener('mouseup', gestureLine.main.onMouseUp, false);
-      canvas.addEventListener('touchend', gestureLine.main.onMouseUp, false);
-      canvas.addEventListener('mousemove', function(evt) {
-        gestureLine.main.onMouseMove(canvas, evt);
+      container.addEventListener('mousedown', gestureLine.main.onMouseDown, false);
+      container.addEventListener('touchstart', gestureLine.main.onMouseDown, false);
+      container.addEventListener('mouseup', gestureLine.main.onMouseUp, false);
+      container.addEventListener('touchend', gestureLine.main.onMouseUp, false);
+      container.addEventListener('mousemove', function(evt) {
+        gestureLine.main.onMouseMove(container, evt);
       }, false);
-      canvas.addEventListener('touchmove', function(evt) {
-        gestureLine.main.onTouchMove(canvas, evt);
+      container.addEventListener('touchmove', function(evt) {
+        gestureLine.main.onTouchMove(container, evt);
       }, false);
 
-      canvas.addEventListener('mouseout', gestureLine.main.onMouseOut, false);
+      container.addEventListener('mouseout', gestureLine.main.onMouseOut, false);
+
+      window.addEventListener( 'resize', gestureLine.main.onWindowResize, false );
       scope.draw();
     },
 
     draw: function () {
-      //console.log("draw");
       requestAnimationFrame(scope.draw);
 
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      context.lineWidth = 0.5;
+      angleLineMorpher.draw(0, 0);
+      //if (isMouseDown) {
+        pointRecorder.draw(Date.now());
+      //} 
 
-      angleLineMorpher.draw(canvas.width*0.5, canvas.height*0.5);
-      if (isMouseDown) {
-        pointRecorder.draw(context);
-      } else {
-        if (!angleLineMorpher.bAmAnimating) {
-          
-        }
-      }
+      renderer.render( scene, camera );
     }, 
 
-    onTouchMove: function (canvas, evt) {
+    onWindowResize: function () {
+      canvasWidth = window.innerWidth;
+      canvasHeight = window.innerHeight;
+
+      if (isCameraPersp) {
+        camera.aspect = canvasWidth / canvasHeight;
+      } else {
+        camera.left   = - canvasWidth / 2;
+        camera.right  =   canvasWidth / 2;
+        camera.top    =   canvasHeight / 2;
+        camera.bottom = - canvasHeight / 2;
+      }
+      camera.updateProjectionMatrix();
+
+
+      renderer.setSize( canvasWidth, canvasHeight );
+    },
+
+    onTouchMove: function (container, evt) {
       evt.preventDefault(); 
       if (isMouseDown) {
-        var rect = canvas.getBoundingClientRect();
+        var rect = container.getBoundingClientRect();
         var mouseX = evt.targetTouches[0].pageX - rect.left;
         var mouseY = evt.targetTouches[0].pageY - rect.top;
-        pointRecorderBuf.addPoint( mouseX, mouseY );
-        if (pointRecorderBuf.pointCounter > 4) {
-          pointRecorder.resampleIntoMe( pointRecorderBuf, numAnglePoints );
-        }
+        pointRecorder.addPoint( mouseX, mouseY );
       }
     },
 
-    onMouseMove: function (canvas, evt) {
+    onMouseMove: function (container, evt) {
 
       if (isMouseDown) {
-        var rect = canvas.getBoundingClientRect();
-        var mouseX = evt.clientX - rect.left;
-        var mouseY = evt.clientY - rect.top;
-        pointRecorderBuf.addPoint( mouseX, mouseY );
-        if (pointRecorderBuf.pointCounter > 4) {
-          pointRecorder.resampleIntoMe( pointRecorderBuf, numAnglePoints );
-        }
+        //var rect = container.getBoundingClientRect();
+
+        var mouseX = - (evt.clientX / canvasWidth * 2 - 1) * (canvasWidth * 0.5);
+        var mouseY = - (evt.clientY / canvasHeight * 2 - 1) * (canvasHeight * 0.5);
+
+        pointRecorder.addPoint( mouseX, mouseY );
       }
     },
 
@@ -128,16 +172,19 @@ gestureLine.main = (function() {
     sendPoints: function () {
       angleLine.convertFromAngleLengthLine(pointRecorder);
       angleLineMorpher.setTargets(angleLine);
-      pointRecorderBuf.clear();
       pointRecorder.clear();
     },
 
     millis: function () {
-      return date.getTime();
+      return new Date().getTime();
     },
 
-    getContext: function () {
-      return context;
+    getVertexShaderText: function() {
+      return vertexShaderText;
+    }, 
+
+    getFragmentShaderText: function() {
+      return fragmentShaderText;
     }
 
   };

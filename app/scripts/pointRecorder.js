@@ -1,57 +1,80 @@
 var gestureLine = gestureLine || {};
+var THREE = THREE || {};
 
 gestureLine.pointRecorder = (function() {
 	'use strict';
 	var pointRecorderClass = function (nPointsToRecord) {
 		this.nPoints = nPointsToRecord;
+		this.geometry = new THREE.Geometry();
+		this.geometry.dynamic = true;
+		this.shaderAttrs = {
+			aPosition: {type: 'v3', value: []},
+			displacement: {type: 'v3', value: []},
+			customColor: {type: 'c', value: []}
+		};
+		this.shaderUniforms = {
+			amplitude: { type: 'f', value: 1.0 },
+			opacity: { type: 'f', value: 0.3 },
+			color: {type: 'c', value: new THREE.Color(0x000000)}
+		};
+		this.material = new THREE.ShaderMaterial( {
+			uniforms: this.shaderUniforms,
+			attributes: this.shaderAttrs,
+			vertexShader: document.getElementById( 'vertexshader' ).textContent,
+			fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
+			depthTest: false,
+			tranparent: true
+		} );
+		this.material.lineWidth = 1;
+
 		this.pos = [];
+		this.tempPos = [];
+		this.curve = new THREE.SplineCurve();
+
+		var aPositions = this.shaderAttrs.aPosition.value;
+		var aColors = this.shaderAttrs.customColor.value;
 		for ( var i = 0; i < this.nPoints; i++ ) {
-			this.pos[i] = new gestureLine.gesturePoint(0,0);
+			//this.pos[i] = new THREE.Vector2( 0, 0 );;
+			this.geometry.vertices.push(new THREE.Vector3( 0, 0, 1 ));
+			aPositions[i] = new THREE.Vector3( 0, 0, 0 );
+			aColors[i] = new THREE.Color(0x000000);
 		}
-		this.pointCounter = 0;
+
+		this.clear();
+
+		this.mesh = new THREE.Line( this.geometry, this.material, THREE.LineStrip );
 	}; 
 
 	var proto = pointRecorderClass.prototype;
 
 	proto.addPoint = function( x, y ) {
-		if ( this.pointCounter < this.nPoints ) {
-			var posInArray = this.pointCounter % this.nPoints;
-			this.pos[posInArray].setPos(x,y);
-			this.pointCounter++;
-		}
+
+		this.tempPos[this.pointCounter] = new THREE.Vector2( x, y );
+		this.pointCounter++;
+		this.curve = new THREE.SplineCurve(this.tempPos);
+		this.pos = this.curve.getSpacedPoints(this.nPoints-1);
 	};
 
-	proto.draw = function(context) {
-		// we have two scenarios: (a) we haven't filled the ring buffer
-		//						  (b) we have filled the ring buffer
-
-		if ( this.pointCounter < this.nPoints ) { // (a)
-			// draw in a normal manner.
-			context.beginPath();
-			for (var i = 0; i < this.pointCounter-1; i++) {
-				context.moveTo(this.pos[i].x, this.pos[i].y);
-				context.lineTo(this.pos[i+1].x, this.pos[i+1].y);
+	proto.draw = function() {
+		
+		if (this.curve){
+			//var poses = this.curve.getPoints( this.nPoints );
+			//console.log(poses[this.nPoints-1].x + ' :: ' + poses[this.nPoints-1].y);
+			for (var i = 0; i < this.pos.length; i++) {
+				this.shaderAttrs.aPosition.value[i] = new THREE.Vector3(this.pos[i].x, this.pos[i].y, 1);
 			}
-			context.stroke();
-
-		} else { 							 // (b)
-			// draw based on ring buffer oldest to newest,
-			var start = this.pointCounter;
-			var end = this.pointCounter + this.nPoints - 1;
-
-			context.beginPath();
-			for (var j = start; j < end; j++) {
-				var posInArray = j % this.nPoints;
-				context.moveTo(this.pos[posInArray].x, this.pos[posInArray].y);
-				context.lineTo(this.pos[posInArray+1].x, this.pos[posInArray+1].y);
+		} else {
+			for (var j = 0; j < this.nPoints; j++) {
+				this.shaderAttrs.aPosition.value[j] = new THREE.Vector3( 0, 0, -1 );
 			}
-
-			context.stroke();
 		}
+		this.shaderAttrs.aPosition.needsUpdate = true;
 	};
 
 	proto.clear = function () {
 		this.pointCounter = 0;
+		this.tempPos = [];
+		this.curve = null;
 	};
 
 	proto.calculateLength = function() {
@@ -60,7 +83,7 @@ gestureLine.pointRecorder = (function() {
 		} else {
 			var len = 0.0;
 			var difx, dify;
-			for (var i = 1; i< this.pointCounter; i++) {
+			for (var i = 1; i< this.nPoints; i++) {
 				difx = this.pos[i].x - this.pos[i-1].x;
 				dify = this.pos[i].y - this.pos[i-1].y;
 				len += Math.sqrt(difx*difx + dify*dify);
