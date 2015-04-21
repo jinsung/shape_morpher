@@ -24,7 +24,7 @@ gestureLine.main = (function() {
   var vertexShaderText;
   var fragmentShaderText;
 
-  var isCameraPersp = false;
+  var isCameraPersp = true;
 
   return {
     init: function () {
@@ -49,13 +49,13 @@ gestureLine.main = (function() {
       }
       scene = new THREE.Scene();
       scene.add(camera);
-      camera.position.set(0, 0, -100);
+      camera.position.set(0, 0, -250);
       camera.lookAt( scene.position );
 
       scene.add( new THREE.AmbientLight( 0x404040 ) );
 
       renderer = new THREE.WebGLRenderer( {antialias: true} );
-      renderer.setClearColor ( 0xf0f0f0 );
+      renderer.setClearColor ( 0x000000 );
       renderer.setPixelRatio ( window.devicePixelRatio );
       renderer.setSize( canvasWidth, canvasHeight );
       container.appendChild(renderer.domElement);
@@ -65,8 +65,9 @@ gestureLine.main = (function() {
 
       var radius = 100;
       var offset = 100;
-      for (var i = 0; i < numAnglePoints; i++) {
-        var div = (i/(numAnglePoints-1)) * (Math.PI * 2.0);
+      var initNumPoints = 100;
+      for (var i = 0; i < initNumPoints; i++) {
+        var div = (i/(initNumPoints-1)) * (Math.PI * 2.0);
         pointRecorder.addPoint(offset + Math.cos(div)*radius, 
           offset+Math.sin(div)*radius);
       }

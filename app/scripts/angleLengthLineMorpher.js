@@ -12,6 +12,7 @@ gestureLine.angleLengthLineMorpher = (function() {
 		this.anglePtsDiffs = [];
  
 		this.pts = [];
+		this.angles = [];
 		this.rightUpControlPts = [];
 		this.rightDownControlPts = [];
 		this.leftUpControlPts = [];
@@ -32,12 +33,14 @@ gestureLine.angleLengthLineMorpher = (function() {
 		this.firstCall = true;
 		
 		this.curve = new THREE.SplineCurve();
+		this.startTime = new Date();
 
 		for (var i = 0; i < this.numPoints; i++) {
 			this.anglePtsPresents[i] = new gestureLine.anglePoint();
 			this.anglePtsTargets[i] = new gestureLine.anglePoint();
 			this.anglePtsDiffs[i] = new gestureLine.anglePoint();
 			this.pts[i] = new THREE.Vector3();
+			this.angles[i] = 0;
 			this.rightUpControlPts[i] = new THREE.Vector3();
 			this.rightDownControlPts[i] = new THREE.Vector3();
 			this.leftUpControlPts[i] = new THREE.Vector3();
@@ -48,7 +51,7 @@ gestureLine.angleLengthLineMorpher = (function() {
 		this.shaderAttrs = [];
 		this.shaderUniforms = [];
 		//this.materials = [];
-		var vsText = document.getElementById( 'vertexshader' ).textContent;
+		var vsText = document.getElementById( 'noise_vertexshader' ).textContent;
 		var fsText = document.getElementById( 'fragmentshader' ).textContent;
 		for (var j=0; j<this.numLines; j++) {
 			var geometry = new THREE.Geometry();
@@ -56,27 +59,32 @@ gestureLine.angleLengthLineMorpher = (function() {
 			var attrs = {
 				aPosition: {type: 'v3', value: []},
 				displacement: {type: 'v3', value: []},
-				customColor: {type: 'c', value: []}
+				customColor: {type: 'c', value: []},
+				noiseSource: {type: 'v3', value: []}
 			};
 			var uniforms = {
 				amplitude: { type: 'f', value: 1.0 },
 				opacity: { type: 'f', value: 0.3 },
-				color: {type: 'c', value: new THREE.Color(0x000000)}
+				color: {type: 'c', value: new THREE.Color(0xffffff)},
+				iGlobalTime: {type: 'f', value: 0.0}
 			};
 			var material = new THREE.ShaderMaterial( {
 				uniforms: uniforms,
 				attributes: attrs,
 				vertexShader: vsText,
 				fragmentShader: fsText,
-				depthTest: false,
+				blending: THREE.AdditiveBlending,
+				depthTest: true,
 				tranparent: true
 			} );
 			material.lineWidth = 1;
 			for (var k = 0; k < this.numPoints; k++) {
 				geometry.vertices.push( new THREE.Vector3( 0, 0, 1 ) );
 				attrs.aPosition.value[k] = new THREE.Vector3( 0, 0, 1 );
-				attrs.displacement.value[k] = new THREE.Vector3( );
-				attrs.customColor.value[k] = new THREE.Color( 0x000000 );
+				attrs.displacement.value[k] = new THREE.Vector3();
+				attrs.noiseSource.value[k] = new THREE.Vector3();
+				attrs.customColor.value[k] = new THREE.Color( 0xffffff );
+				attrs.customColor.value[k].setHSL( 1, 0.0, 0.5);
 			}
 			var mesh = new THREE.Line( geometry, material, THREE.LineStrip );
 			this.shaderAttrs.push(attrs);
@@ -176,7 +184,7 @@ gestureLine.angleLengthLineMorpher = (function() {
 
 			this.pts[i].x = 0.95 * this.pts[i].x + 0.05 * this.p1.x;
 			this.pts[i].y = 0.95 * this.pts[i].y + 0.05 * this.p1.y;
-
+			this.angles[i] = angleToAdd;
 			this.p0.set(this.p1.x, this.p1.y, 1);
 		}
 
@@ -211,27 +219,41 @@ gestureLine.angleLengthLineMorpher = (function() {
 	};
 
 	proto.drawPoints = function() {
-		var time = Date.now() * 0.001;
+		var time = (Date.now() - this.startTime.getTime()) * 0.01;
 		if (this.ptCount <= 0) {return;}
 
 		for (var j=0; j<this.numLines; j++) {
 			var attrs = this.shaderAttrs[j];
 			var uniform = this.shaderUniforms[j];
-
+			var displaceLineFactor = j / this.numLines * 2 - 1;
 			uniform.amplitude.value = 1;// * Math.sin( 0.5 * time );
 			uniform.color.value.offsetHSL( 0.0005, 0, 0 );
+			uniform.iGlobalTime.value = time;
 
 			for (var i=0; i<this.ptCount; i++) {
-				var displacementF = 1 - Math.abs(i / this.ptCount * 2 - 1);
-				var nx = ( j * displacementF ) * ( 0.5 - Math.random() );
-				var ny = ( j * displacementF ) * ( 0.5 - Math.random() );
-				var nz = ( j * 0.2 ) * ( 0.5 - Math.random() );
-				attrs.displacement.value[i].set( nx, ny, nz );
+				//var displacementF = 1 - Math.abs(i / this.ptCount * 2 - 1) + 0.1;
+				var displacementF = 30.0;
+				var dx = displaceLineFactor * displacementF;
+				var dy = displaceLineFactor * displacementF;
+				var dz = 0;
+
+				var nx = this.angles[i] * 0.001;
+				var ny = ((- this.centroid.x - this.pts[i].x) + 
+					( this.centroid.y - this.pts[i].y)) * 0.0001;
+				var nz = time * 0.001;
+
+				attrs.noiseSource.value[i].set(nx, ny, nz);
+				attrs.displacement.value[i].set( dx, dy, dz );
 				attrs.aPosition.value[i].set(-this.pts[i].x * 2, -this.pts[i].y *2, 1);
+				attrs.customColor.value[i].setHSL( this.angles[i]/(Math.PI*2), 0.5, (1-Math.abs(displaceLineFactor))*0.7 + 0.3);
 			}
+			attrs.noiseSource.needsUpdate = true;
 			attrs.displacement.needsUpdate = true;
 			attrs.aPosition.needsUpdate = true;
+			attrs.customColor.needsUpdate = true;
 		}
+
+		//console.log(time);
 	};
 
 	return angleLengthLineMorpherClass;
