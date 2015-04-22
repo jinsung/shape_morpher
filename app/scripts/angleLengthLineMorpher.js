@@ -228,8 +228,11 @@ gestureLine.angleLengthLineMorpher = (function() {
 	};
 
 	proto.drawPoints = function() {
-		var time = (Date.now() - this.startTime.getTime()) * 0.01;
+
 		if (this.ptCount <= 0) {return;}
+		var time = (Date.now() - this.startTime.getTime()) * 0.01;
+		var cosTime = Math.abs( Math.cos (time * 0.02) );
+		var sinTime = Math.sin(time * 0.1);
 
 		for (var j=0; j<this.numLines; j++) {
 			var attrs = this.shaderAttrs[j];
@@ -247,8 +250,8 @@ gestureLine.angleLengthLineMorpher = (function() {
 				var dz = 0;
 
 				var nx = this.angles[i] * 0.001;
-				var ny = ((- this.centroid.x - this.pts[i].x) + 
-					( this.centroid.y - this.pts[i].y)) * 0.0001;
+				var ny = ((-this.centroid.x - this.pts[i].x) + 
+					( this.centroid.y - this.pts[i].y)) * 0.00015;
 				var nz = time * 0.001;
 
 				attrs.noiseSource.value[i].set(nx, ny, nz);
@@ -256,15 +259,16 @@ gestureLine.angleLengthLineMorpher = (function() {
 				attrs.displacement.value[i].set( dx, dy, dz );
 				//attrs.displacement.value[i].set( 0, 0, 0 );
 				attrs.aPosition.value[i].set(-this.pts[i].x * 2, -this.pts[i].y *2, 1);
-				attrs.customColor.value[i].setHSL( this.angles[i]/(Math.PI*2), 0.5, (1-Math.abs(displaceLineFactor))*0.7 + 0.3);
+				attrs.customColor.value[i].setHSL( this.angles[i] / (Math.PI*2) * (i * cosTime * 0.0007), 0.3, 
+					(1 - Math.abs(displaceLineFactor)) * 0.9 + 0.1);
 			}
 			attrs.noiseSource.needsUpdate = true;
 			attrs.displacement.needsUpdate = true;
 			attrs.aPosition.needsUpdate = true;
 			attrs.customColor.needsUpdate = true;
 			
-			var jmitter = 1+Math.sin(time* 0.1) * (j*0.002);
-			var rot = ((time * 0.05) * (Math.PI * jmitter)) ;
+			var jmitter = 1 + sinTime * (j*0.009);
+			var rot = ((cosTime) * 5) * (Math.PI * jmitter);
 			//var rot1 = j* 0.003;
 			this.meshes[j].rotation.y = rot;
 			//this.meshes[j].rotation.x += rot1;

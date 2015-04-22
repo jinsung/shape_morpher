@@ -103,7 +103,7 @@ gestureLine.main = (function() {
       requestAnimationFrame(scope.draw);
 
       var intervalTime = Math.floor(Date.now() / 1000);
-      if ( intervalTime != tempIntervalTime && intervalTime % 2 === 0) {
+      if ( intervalTime !== tempIntervalTime && intervalTime % 2 === 0) {
         tempIntervalTime = intervalTime;
         gestureLine.main.changeShape();
       } 
