@@ -2,7 +2,7 @@
 <html class="no-js">
   <head>
     <meta charset="utf-8">
-    <title>Gesture Line</title>
+    <title>Shapes & Lines</title>
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width">
     <link rel="shortcut icon" href="/favicon.ico">
@@ -171,6 +171,8 @@
         float noise = 100.0 *  -.10 * turbulence( 5.5 * noiseSource );
         //displacement += noise;
         vec3 newPosition = aPosition;
+        //newPosition.x += noise * 0.1 * displacement.x;
+        //newPosition.y += noise * 0.1 * displacement.x;
         newPosition.z += noise * displacement.x;
         vColor = customColor;
 

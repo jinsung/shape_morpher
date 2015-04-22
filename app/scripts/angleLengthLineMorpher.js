@@ -77,7 +77,7 @@ gestureLine.angleLengthLineMorpher = (function() {
 				depthTest: true,
 				tranparent: true
 			} );
-			material.lineWidth = 1;
+			material.lineWidth = 0.5;
 			for (var k = 0; k < this.numPoints; k++) {
 				geometry.vertices.push( new THREE.Vector3( 0, 0, 1 ) );
 				attrs.aPosition.value[k] = new THREE.Vector3( 0, 0, 1 );
@@ -86,10 +86,12 @@ gestureLine.angleLengthLineMorpher = (function() {
 				attrs.customColor.value[k] = new THREE.Color( 0xffffff );
 				attrs.customColor.value[k].setHSL( 1, 0.0, 0.5);
 			}
-			var mesh = new THREE.Line( geometry, material, THREE.LineStrip );
+			var mesh = new THREE.Line( geometry, material , THREE.LinePieces );
 			this.shaderAttrs.push(attrs);
 			this.shaderUniforms.push(uniforms);
+			mesh.rotation.z = Math.PI;
 			this.meshes.push(mesh);
+
 		}
 
 		this.clear();
@@ -213,9 +215,16 @@ gestureLine.angleLengthLineMorpher = (function() {
 		var diffInX = x - this.centroidOffsetCatch.x;
 
 		for (var j=0; j<this.ptCount; j++) {
-			this.pts[j].y += diffInY;
-			this.pts[j].x += diffInX;
+			/*if (j === (this.ptCount - 1)) {
+				
+			} else {*/
+				this.pts[j].y += diffInY;
+				this.pts[j].x += diffInX;
+			//}
 		}
+
+		//this.pts[0].y = this.pts[186].x;
+		//this.pts[0].x = this.pts[187].y;
 	};
 
 	proto.drawPoints = function() {
@@ -243,7 +252,9 @@ gestureLine.angleLengthLineMorpher = (function() {
 				var nz = time * 0.001;
 
 				attrs.noiseSource.value[i].set(nx, ny, nz);
+				//attrs.noiseSource.value[i].set(0, 0, 0);
 				attrs.displacement.value[i].set( dx, dy, dz );
+				//attrs.displacement.value[i].set( 0, 0, 0 );
 				attrs.aPosition.value[i].set(-this.pts[i].x * 2, -this.pts[i].y *2, 1);
 				attrs.customColor.value[i].setHSL( this.angles[i]/(Math.PI*2), 0.5, (1-Math.abs(displaceLineFactor))*0.7 + 0.3);
 			}
@@ -251,6 +262,12 @@ gestureLine.angleLengthLineMorpher = (function() {
 			attrs.displacement.needsUpdate = true;
 			attrs.aPosition.needsUpdate = true;
 			attrs.customColor.needsUpdate = true;
+			
+			var jmitter = 1+Math.sin(time* 0.1) * (j*0.002);
+			var rot = ((time * 0.05) * (Math.PI * jmitter)) ;
+			//var rot1 = j* 0.003;
+			this.meshes[j].rotation.y = rot;
+			//this.meshes[j].rotation.x += rot1;
 		}
 
 		//console.log(time);

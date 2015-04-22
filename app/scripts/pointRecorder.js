@@ -42,7 +42,7 @@ gestureLine.pointRecorder = (function() {
 
 		this.clear();
 
-		this.mesh = new THREE.Line( this.geometry, this.material, THREE.LineStrip );
+		this.mesh = new THREE.Line( this.geometry, this.material, THREE.LineLoop );
 	}; 
 
 	var proto = pointRecorderClass.prototype;
@@ -51,8 +51,13 @@ gestureLine.pointRecorder = (function() {
 
 		this.tempPos[this.pointCounter] = new THREE.Vector2( x, y );
 		this.pointCounter++;
-		this.curve = new THREE.SplineCurve(this.tempPos);
-		this.pos = this.curve.getSpacedPoints(this.nPoints-1);
+		//this.curve = new THREE.SplineCurve(this.tempPos);
+		if (this.tempPos.length > 3) {
+			this.curve = new THREE.Shape(this.tempPos);
+			
+			this.pos = this.curve.createSpacedPointsGeometry(this.nPoints-1).vertices;
+			this.pos.push(this.tempPos[this.pointCounter-1]);
+		}
 	};
 
 	proto.draw = function() {

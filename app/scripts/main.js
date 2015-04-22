@@ -26,14 +26,21 @@ gestureLine.main = (function() {
 
   var isCameraPersp = true;
 
+  var currentShapeIndex = -1;
+  var shapesArray = [];
+
+  var tempIntervalTime = 0;
+
   return {
     init: function () {
       scope = this;
       date = new Date();
       canvasWidth = window.innerWidth;
       canvasHeight = window.innerHeight;
-      numAnglePoints = 250;
-      numLines = 20;
+      numAnglePoints = 200;
+      numLines = 25;
+
+      shapesArray = [5, 80, 4, 9];
 
       pointRecorder = new gestureLine.pointRecorder (numAnglePoints);
       angleLine = new gestureLine.angleLengthLine(numAnglePoints);
@@ -49,7 +56,7 @@ gestureLine.main = (function() {
       }
       scene = new THREE.Scene();
       scene.add(camera);
-      camera.position.set(0, 0, -250);
+      camera.position.set(0, 0, -180);
       camera.lookAt( scene.position );
 
       scene.add( new THREE.AmbientLight( 0x404040 ) );
@@ -63,16 +70,8 @@ gestureLine.main = (function() {
       vertexShaderText = document.getElementById( 'vertexshader' ).textContent;
       fragmentShaderText = document.getElementById( 'fragmentshader' ).textContent;
 
-      var radius = 100;
-      var offset = 100;
-      var initNumPoints = 100;
-      for (var i = 0; i < initNumPoints; i++) {
-        var div = (i/(initNumPoints-1)) * (Math.PI * 2.0);
-        pointRecorder.addPoint(offset + Math.cos(div)*radius, 
-          offset+Math.sin(div)*radius);
-      }
+      gestureLine.main.changeShape();
 
-      gestureLine.main.sendPoints();
       gestureLine.main.sendPoints();
 
       pointRecorder.clear();
@@ -82,11 +81,11 @@ gestureLine.main = (function() {
       }
 
       isMouseDown = false;
-      container.addEventListener('mousedown', gestureLine.main.onMouseDown, false);
-      container.addEventListener('touchstart', gestureLine.main.onMouseDown, false);
+      //container.addEventListener('mousedown', gestureLine.main.onMouseDown, false);
+      //container.addEventListener('touchstart', gestureLine.main.onMouseDown, false);
       container.addEventListener('mouseup', gestureLine.main.onMouseUp, false);
       container.addEventListener('touchend', gestureLine.main.onMouseUp, false);
-      container.addEventListener('mousemove', function(evt) {
+      /*container.addEventListener('mousemove', function(evt) {
         gestureLine.main.onMouseMove(container, evt);
       }, false);
       container.addEventListener('touchmove', function(evt) {
@@ -94,13 +93,20 @@ gestureLine.main = (function() {
       }, false);
 
       container.addEventListener('mouseout', gestureLine.main.onMouseOut, false);
-
+      */
       window.addEventListener( 'resize', gestureLine.main.onWindowResize, false );
       scope.draw();
     },
 
     draw: function () {
+      
       requestAnimationFrame(scope.draw);
+
+      var intervalTime = Math.floor(Date.now() / 1000);
+      if ( intervalTime != tempIntervalTime && intervalTime % 2 === 0) {
+        tempIntervalTime = intervalTime;
+        gestureLine.main.changeShape();
+      } 
 
       angleLineMorpher.draw(0, 0);
       //if (isMouseDown) {
@@ -109,6 +115,20 @@ gestureLine.main = (function() {
 
       renderer.render( scene, camera );
     }, 
+
+    changeShape: function () {
+      var radius = 100;
+      var offset = 100;
+      currentShapeIndex = (currentShapeIndex+1) % shapesArray.length;
+      var initNumPoints = shapesArray[currentShapeIndex];
+      for (var i = 0; i < initNumPoints; i++) {
+        var div = (i/(initNumPoints-1)) * (Math.PI * 2.0);
+        pointRecorder.addPoint(offset + Math.cos(div)*radius, 
+          offset+Math.sin(div)*radius);
+      }
+
+      gestureLine.main.sendPoints();
+    },
 
     onWindowResize: function () {
       canvasWidth = window.innerWidth;
@@ -155,11 +175,11 @@ gestureLine.main = (function() {
     },
 
     onMouseUp: function () {
-      if (isMouseDown) {
+      /*if (isMouseDown) {
         gestureLine.main.sendPoints();
       }
-      isMouseDown = false;
-
+      isMouseDown = false;*/
+      gestureLine.main.changeShape();
     },
 
     onMouseOut: function () {
