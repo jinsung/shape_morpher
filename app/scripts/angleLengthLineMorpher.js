@@ -35,6 +35,10 @@ gestureLine.angleLengthLineMorpher = (function() {
 		this.curve = new THREE.SplineCurve();
 		this.startTime = new Date();
 
+		this.saturation = gestureLine.configGUI.config.saturation;
+		this.colorVarious = gestureLine.configGUI.config.colorVarious;
+		this.rotationSpeed = gestureLine.configGUI.config.rotationSpeed;
+
 		for (var i = 0; i < this.numPoints; i++) {
 			this.anglePtsPresents[i] = new gestureLine.anglePoint();
 			this.anglePtsTargets[i] = new gestureLine.anglePoint();
@@ -66,7 +70,9 @@ gestureLine.angleLengthLineMorpher = (function() {
 				amplitude: { type: 'f', value: 1.0 },
 				opacity: { type: 'f', value: 0.3 },
 				color: {type: 'c', value: new THREE.Color(0xffffff)},
-				iGlobalTime: {type: 'f', value: 0.0}
+				iGlobalTime: {type: 'f', value: 0.0},
+				texture: {type: 't', value: THREE.ImageUtils.loadTexture( 'images/particle3.png' )},
+				size: {type: 'f', value: gestureLine.configGUI.config.pointSize}
 			};
 			var material = new THREE.ShaderMaterial( {
 				uniforms: uniforms,
@@ -74,8 +80,8 @@ gestureLine.angleLengthLineMorpher = (function() {
 				vertexShader: vsText,
 				fragmentShader: fsText,
 				blending: THREE.AdditiveBlending,
-				depthTest: true,
-				tranparent: true
+				depthTest: false,
+				transparent: true
 			} );
 			material.lineWidth = 0.5;
 			for (var k = 0; k < this.numPoints; k++) {
@@ -86,10 +92,13 @@ gestureLine.angleLengthLineMorpher = (function() {
 				attrs.customColor.value[k] = new THREE.Color( 0xffffff );
 				attrs.customColor.value[k].setHSL( 1, 0.0, 0.5);
 			}
-			var mesh = new THREE.Line( geometry, material , THREE.LinePieces );
+			//var mesh = new THREE.Line( geometry, material , THREE.LinePieces );
+			var mesh = new THREE.Line( geometry, material );
+			//var mesh = new THREE.PointCloud( geometry, material );
 			this.shaderAttrs.push(attrs);
 			this.shaderUniforms.push(uniforms);
-			mesh.rotation.z = Math.PI;
+			mesh.rotation.z = Math.PI / 2;
+			mesh.rotation.y += j * (Math.PI/1.3)/this.numLines;
 			this.meshes.push(mesh);
 
 		}
@@ -149,6 +158,12 @@ gestureLine.angleLengthLineMorpher = (function() {
 
 		this.drawPoints();
 		this.firstCall = false;
+	};
+
+	proto.setPointSize = function (size) {
+		for (var i = 0, l = this.shaderUniforms.length; i < l; i++) {
+			this.shaderUniforms[i].size.value = size;
+		}
 	};
 
 	/**
@@ -244,7 +259,7 @@ gestureLine.angleLengthLineMorpher = (function() {
 
 			for (var i=0; i<this.ptCount; i++) {
 				//var displacementF = 1 - Math.abs(i / this.ptCount * 2 - 1) + 0.1;
-				var displacementF = 30.0;
+				var displacementF = 8.0;
 				var dx = displaceLineFactor * displacementF;
 				var dy = displaceLineFactor * displacementF;
 				var dz = 0;
@@ -259,7 +274,7 @@ gestureLine.angleLengthLineMorpher = (function() {
 				attrs.displacement.value[i].set( dx, dy, dz );
 				//attrs.displacement.value[i].set( 0, 0, 0 );
 				attrs.aPosition.value[i].set(-this.pts[i].x * 2, -this.pts[i].y *2, 1);
-				attrs.customColor.value[i].setHSL( this.angles[i] / (Math.PI*2) * (i * cosTime * 0.0007), 0.3, 
+				attrs.customColor.value[i].setHSL( this.colorVarious * (i * cosTime * 0.0007), this.saturation, 
 					(1 - Math.abs(displaceLineFactor)) * 0.9 + 0.1);
 			}
 			attrs.noiseSource.needsUpdate = true;
@@ -268,10 +283,10 @@ gestureLine.angleLengthLineMorpher = (function() {
 			attrs.customColor.needsUpdate = true;
 			
 			var jmitter = 1 + sinTime * (j*0.009);
-			var rot = ((cosTime) * 5) * (Math.PI * jmitter);
+			var rot = ((cosTime) * this.rotationSpeed) * (Math.PI * jmitter);
 			//var rot1 = j* 0.003;
-			this.meshes[j].rotation.y = rot;
-			//this.meshes[j].rotation.x += rot1;
+			this.meshes[j].rotation.y += rot * 0.01;
+			//this.meshes[j].rotation.z = Math.PI / 2;
 		}
 
 		//console.log(time);

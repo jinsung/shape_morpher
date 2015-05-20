@@ -25,22 +25,32 @@ gestureLine.main = (function() {
   var fragmentShaderText;
 
   var isCameraPersp = true;
+  var isUsingSVG = true;
 
   var currentShapeIndex = -1;
   var shapesArray = [];
+  /*var svgFiles = ['numbers-00.svg', 'numbers-01.svg', 'numbers-02.svg', 'numbers-03.svg', 'numbers-04.svg', 
+                  'numbers-05.svg', 'numbers-06.svg', 'numbers-07.svg', 'numbers-08.svg', 'numbers-09.svg'];*/
+  var svgFiles = ['hangari4.svg', 'hangari3.svg', 'hangari2.svg'];
+  //var svgFiles = ['hangari.svg'];
+  var svgPaths = [];
+  var svgLoadCounter = 0;
 
   var tempIntervalTime = 0;
 
   return {
     init: function () {
+      gestureLine.configGUI.init();
       scope = this;
       date = new Date();
       canvasWidth = window.innerWidth;
       canvasHeight = window.innerHeight;
       numAnglePoints = 200;
-      numLines = 25;
+      numLines = 50;
 
-      shapesArray = [5, 80, 4, 9];
+      shapesArray = [80, 2, 3, 4, 5, 6, 7, 8, 9];
+
+
 
       pointRecorder = new gestureLine.pointRecorder (numAnglePoints);
       angleLine = new gestureLine.angleLengthLine(numAnglePoints);
@@ -70,31 +80,42 @@ gestureLine.main = (function() {
       vertexShaderText = document.getElementById( 'vertexshader' ).textContent;
       fragmentShaderText = document.getElementById( 'fragmentshader' ).textContent;
 
+      isMouseDown = false;
+
+      container.addEventListener('mouseup', gestureLine.main.onMouseUp, false);
+      container.addEventListener('touchend', gestureLine.main.onMouseUp, false);
+
+      window.addEventListener( 'resize', gestureLine.main.onWindowResize, false );
+
+      if (isUsingSVG) {
+        gestureLine.ee.addListener('svgLoaded', gestureLine.main.onSVGLoaded);
+        for (var i = 0, l = svgFiles.length; i < l; i++) {
+          var path = 'images/' + svgFiles[i];
+          gestureLine.svgReader.init (i, path);
+        }
+      } else {
+        gestureLine.main.start();
+      }
+
+    },
+
+    onSVGLoaded: function (index, path) {
+      svgLoadCounter++;
+      svgPaths[index] = path;
+      if (svgLoadCounter >= svgFiles.length) {
+        gestureLine.main.start();
+        
+      }
+    },
+
+    start: function () {
       gestureLine.main.changeShape();
-
       gestureLine.main.sendPoints();
-
       pointRecorder.clear();
       scene.add(pointRecorder.mesh);
       for (var j=0; j<numLines; j++) {
         scene.add(angleLineMorpher.meshes[j]);
       }
-
-      isMouseDown = false;
-      //container.addEventListener('mousedown', gestureLine.main.onMouseDown, false);
-      //container.addEventListener('touchstart', gestureLine.main.onMouseDown, false);
-      container.addEventListener('mouseup', gestureLine.main.onMouseUp, false);
-      container.addEventListener('touchend', gestureLine.main.onMouseUp, false);
-      /*container.addEventListener('mousemove', function(evt) {
-        gestureLine.main.onMouseMove(container, evt);
-      }, false);
-      container.addEventListener('touchmove', function(evt) {
-        gestureLine.main.onTouchMove(container, evt);
-      }, false);
-
-      container.addEventListener('mouseout', gestureLine.main.onMouseOut, false);
-      */
-      window.addEventListener( 'resize', gestureLine.main.onWindowResize, false );
       scope.draw();
     },
 
@@ -116,17 +137,32 @@ gestureLine.main = (function() {
       renderer.render( scene, camera );
     }, 
 
-    changeShape: function () {
-      var radius = 100;
-      var offset = 100;
-      currentShapeIndex = (currentShapeIndex+1) % shapesArray.length;
-      var initNumPoints = shapesArray[currentShapeIndex];
-      for (var i = 0; i < initNumPoints; i++) {
-        var div = (i/(initNumPoints-1)) * (Math.PI * 2.0);
-        pointRecorder.addPoint(offset + Math.cos(div)*radius, 
-          offset+Math.sin(div)*radius);
-      }
+    guiChanged: function () {
+      angleLineMorpher.setPointSize(gestureLine.configGUI.config.pointSize);
+      angleLineMorpher.rotationSpeed = gestureLine.configGUI.config.rotationSpeed;
+      angleLineMorpher.saturation = gestureLine.configGUI.config.saturation;
+      angleLineMorpher.colorVarious = gestureLine.configGUI.config.colorVarious;
+    },
 
+    changeShape: function () {
+      if (isUsingSVG) {
+        currentShapeIndex = (currentShapeIndex+1) % svgFiles.length;
+        var path = svgPaths[currentShapeIndex];
+        pointRecorder.setPath(path);
+
+        
+      } else {
+        var radius = 100;
+        var offset = 100;
+        currentShapeIndex = (currentShapeIndex+1) % shapesArray.length;
+        var initNumPoints = shapesArray[currentShapeIndex];
+        for (var i = 0; i < initNumPoints; i++) {
+          var div = (i/(initNumPoints-1)) * (Math.PI * 2.0);
+          pointRecorder.addPoint(offset + Math.cos(div)*radius, 
+            offset+Math.sin(div)*radius);
+        }
+        pointRecorder.setShape();
+      }
       gestureLine.main.sendPoints();
     },
 

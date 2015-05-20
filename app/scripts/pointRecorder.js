@@ -48,10 +48,22 @@ gestureLine.pointRecorder = (function() {
 	var proto = pointRecorderClass.prototype;
 
 	proto.addPoint = function( x, y ) {
-
 		this.tempPos[this.pointCounter] = new THREE.Vector2( x, y );
 		this.pointCounter++;
-		//this.curve = new THREE.SplineCurve(this.tempPos);
+	};
+
+	proto.setPath = function ( path ) {
+		
+		if (path.getPoints().length > 3) {
+			this.curve = path;
+			this.pos = this.curve.createSpacedPointsGeometry(this.nPoints-1).vertices;
+			var points = path.getPoints(); 
+			var pathL = points.length;
+			this.pos.push(points[pathL]);
+		}
+	};
+
+	proto.setShape = function () {
 		if (this.tempPos.length > 3) {
 			this.curve = new THREE.Shape(this.tempPos);
 			

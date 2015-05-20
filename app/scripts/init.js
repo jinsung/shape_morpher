@@ -1,4 +1,5 @@
 var gestureLine = {};
+var EventEmitter = EventEmitter || {};
 
 gestureLine.ns = function(name) {
 	'use strict';
@@ -14,3 +15,5 @@ gestureLine.ns = function(name) {
 
     return namespace;
 };
+
+gestureLine.ee = new EventEmitter();

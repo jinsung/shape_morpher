@@ -42,6 +42,7 @@
       uniform float amplitude;
       uniform float numLine;
       uniform float iGlobalTime;
+      uniform float size;
 
       attribute vec3 aPosition;
       attribute vec3 displacement;
@@ -178,20 +179,23 @@
         newPosition.z += noise * displacement.x;
         vColor = customColor;
 
-        gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );
+        vec4 mvPosition = modelViewMatrix * vec4( newPosition, 1.0 );
+
+        //gl_PointSize = size * ( 150.0 / length( mvPosition.xyz ) );
+        gl_Position = projectionMatrix * mvPosition;
       }
     </script>
 
     <script type="x-shader/x-fragment" id="fragmentshader">
       uniform vec3 color;
       uniform float opacity;
+      uniform sampler2D texture;
 
       varying vec3 vColor;
-      //varying float noise;
 
       void main() {
-
         gl_FragColor = vec4( vColor * color, opacity );
+        //gl_FragColor = gl_FragColor * texture2D(texture, gl_PointCoord );
       }
     </script>
 
@@ -200,6 +204,8 @@
     <!-- bower:js -->
     <script src="bower_components/jquery/dist/jquery.js"></script>
     <script src="bower_components/threejs/build/three.js"></script>
+    <script src="bower_components/dat-gui/build/dat.gui.js"></script>
+    <script src="bower_components/eventEmitter/EventEmitter.js"></script>
     <!-- endbower -->
     <!-- endbuild -->
 
@@ -215,6 +221,8 @@
 
         <!-- build:js({app,.tmp}) scripts/main.js -->
         <script src="scripts/init.js"></script>
+        <script src="scripts/configGUI.js"></script>
+        <script src="scripts/svgReader.js"></script>
         <script src="scripts/gesturePoint.js"></script>
         <script src="scripts/anglePoint.js"></script>
         <script src="scripts/pointRecorder.js"></script>

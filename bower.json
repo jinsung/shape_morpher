@@ -4,6 +4,8 @@
   "private": true,
   "dependencies": {
     "jquery": "~1.11.1",
-    "threejs": "*"
+    "threejs": "*",
+    "dat-gui": "~0.5.1",
+    "eventEmitter": "~4.2.11"
   }
 }

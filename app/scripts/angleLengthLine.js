@@ -29,13 +29,13 @@ gestureLine.angleLengthLine = (function() {
 		}
 
 		this.pointCounter = mom.nPoints - 2;
-		for ( var i = 2; i < mom.nPoints; i++ ) {
+		for ( var i = 2; i < mom.nPoints-1; i++ ) {
 			//var anglePointData = mom.pos[i-2];
 			var anglePointData1 = mom.pos[i-1];
 			var anglePointData2 = mom.pos[i];
 
 			if (i === 2) {
-				f2 = Math.PI - this.returnAngle(anglePointData1, anglePointData2);
+				f2 = Math.PI;// - this.returnAngle(anglePointData1, anglePointData2);
 			} else {
 				f1 = Math.PI - this.returnAngle(anglePointData1, anglePointData2);
 				f3 = f1 - f2;
