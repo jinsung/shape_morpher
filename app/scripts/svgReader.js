@@ -118,6 +118,13 @@ gestureLine.svgReader = (function() {
 						currentPoint.y += (mult * pathData[i][4]);
 						line.bezierCurveTo( x1, y2, x2, y2, currentPoint.x, currentPoint.y );
 						break;
+
+					case 'Z':
+						// TODO - Close path
+						break;
+					case 'z':
+						// TODO - Close path
+						break;
 				}
 			}
 

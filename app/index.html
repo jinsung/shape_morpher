@@ -2,7 +2,7 @@
 <html class="no-js">
   <head>
     <meta charset="utf-8">
-    <title>Shapes & Lines</title>
+    <title>Moon Jar</title>
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width">
     <link rel="shortcut icon" href="/favicon.ico">
@@ -171,12 +171,12 @@
 
         float noise = 100.0 *  -.10 * turbulence( 5.5 * noiseSource );
         vec3 noiseSource2 = vec3(noiseSource.xz, 0.0);
-        float noise2 = 5.0 *  .10 * turbulence( 6.0 * noiseSource2 );
+        float noise2 = 80.0 *  .10 * turbulence( 6.0 * noiseSource2 );
         //displacement += noise;
         vec3 newPosition = aPosition;
         //newPosition.x += noise * 0.1 * displacement.x;
         newPosition.y += noise2 * displacement.x;
-        newPosition.z += noise * displacement.x;
+        newPosition.z += noise * 0.2 * displacement.x;
         vColor = customColor;
 
         vec4 mvPosition = modelViewMatrix * vec4( newPosition, 1.0 );
@@ -228,6 +228,7 @@
         <script src="scripts/pointRecorder.js"></script>
         <script src="scripts/angleLengthLine.js"></script>
         <script src="scripts/angleLengthLineMorpher.js"></script>
+        <script src="scripts/sky.js"></script>
         <script src="scripts/main.js"></script>
         <!-- endbuild -->
 </body>

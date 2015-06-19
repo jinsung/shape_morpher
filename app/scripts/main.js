@@ -37,6 +37,7 @@ gestureLine.main = (function() {
   var svgLoadCounter = 0;
 
   var tempIntervalTime = 0;
+  var sky;
 
   return {
     init: function () {
@@ -46,11 +47,9 @@ gestureLine.main = (function() {
       canvasWidth = window.innerWidth;
       canvasHeight = window.innerHeight;
       numAnglePoints = 200;
-      numLines = 50;
+      numLines = 45;
 
       shapesArray = [80, 2, 3, 4, 5, 6, 7, 8, 9];
-
-
 
       pointRecorder = new gestureLine.pointRecorder (numAnglePoints);
       angleLine = new gestureLine.angleLengthLine(numAnglePoints);
@@ -60,19 +59,22 @@ gestureLine.main = (function() {
       document.body.appendChild( container );
 
       if (isCameraPersp) {
-        camera = new THREE.PerspectiveCamera( 60, canvasWidth / canvasHeight, 1, 1000 );  
+        camera = new THREE.PerspectiveCamera( 60, canvasWidth / canvasHeight, 1, 5000 );  
       } else {
         camera = new THREE.OrthographicCamera( canvasWidth / - 2, canvasWidth / 2, canvasHeight / 2, canvasHeight / - 2, 0.1, 1000 );
       }
       scene = new THREE.Scene();
       scene.add(camera);
-      camera.position.set(0, 0, -180);
+      camera.position.set(0, 0, -240);
       camera.lookAt( scene.position );
 
-      scene.add( new THREE.AmbientLight( 0x404040 ) );
+      //scene.add( new THREE.AmbientLight( 0x404040 ) );
+
+      sky = new gestureLine.sky();
+      scene.add(sky);
 
       renderer = new THREE.WebGLRenderer( {antialias: true} );
-      renderer.setClearColor ( 0x000000 );
+      renderer.setClearColor ( 0x080808 );
       renderer.setPixelRatio ( window.devicePixelRatio );
       renderer.setSize( canvasWidth, canvasHeight );
       container.appendChild(renderer.domElement);
@@ -81,8 +83,9 @@ gestureLine.main = (function() {
       fragmentShaderText = document.getElementById( 'fragmentshader' ).textContent;
 
       isMouseDown = false;
-
+      container.addEventListener('mousedown', gestureLine.main.onMouseDown, false);
       container.addEventListener('mouseup', gestureLine.main.onMouseUp, false);
+      container.addEventListener('touchstart', gestureLine.main.onMouseDown, false);
       container.addEventListener('touchend', gestureLine.main.onMouseUp, false);
 
       window.addEventListener( 'resize', gestureLine.main.onWindowResize, false );
@@ -120,19 +123,20 @@ gestureLine.main = (function() {
     },
 
     draw: function () {
-      
       requestAnimationFrame(scope.draw);
-
-      var intervalTime = Math.floor(Date.now() / 1000);
+      var intervalTime = Math.floor(Date.now() / 2000);
       if ( intervalTime !== tempIntervalTime && intervalTime % 2 === 0) {
         tempIntervalTime = intervalTime;
         gestureLine.main.changeShape();
       } 
-
+      sky.draw();
       angleLineMorpher.draw(0, 0);
-      //if (isMouseDown) {
-        pointRecorder.draw(Date.now());
-      //} 
+      if (isMouseDown) {
+        angleLineMorpher.increaseDisplacement();
+      } else {
+        angleLineMorpher.decreaseDisplacement();
+      }
+      pointRecorder.draw(Date.now());
 
       renderer.render( scene, camera );
     }, 
@@ -149,8 +153,6 @@ gestureLine.main = (function() {
         currentShapeIndex = (currentShapeIndex+1) % svgFiles.length;
         var path = svgPaths[currentShapeIndex];
         pointRecorder.setPath(path);
-
-        
       } else {
         var radius = 100;
         var offset = 100;
@@ -213,8 +215,8 @@ gestureLine.main = (function() {
     onMouseUp: function () {
       /*if (isMouseDown) {
         gestureLine.main.sendPoints();
-      }
-      isMouseDown = false;*/
+      }*/
+      isMouseDown = false;
       gestureLine.main.changeShape();
     },
 

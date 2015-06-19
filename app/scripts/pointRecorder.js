@@ -53,11 +53,10 @@ gestureLine.pointRecorder = (function() {
 	};
 
 	proto.setPath = function ( path ) {
-		
-		if (path.getPoints().length > 3) {
+		var points = path.getPoints();
+		if (points.length > 3) {
 			this.curve = path;
 			this.pos = this.curve.createSpacedPointsGeometry(this.nPoints-1).vertices;
-			var points = path.getPoints(); 
 			var pathL = points.length;
 			this.pos.push(points[pathL]);
 		}

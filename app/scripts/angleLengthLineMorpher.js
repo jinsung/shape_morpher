@@ -30,12 +30,21 @@ gestureLine.angleLengthLineMorpher = (function() {
 		this.lineLength = 1.1;
 		this.angleTotalBack = 0;
 		this.angleTotalForw = 0;
+		this.tweenFactor = 0.06;
 		this.firstCall = true;
+		this.displacementF = 10.0;
+		this.maxDisplacementF = 100.0;
+		this.minDisplacementF = 5.0;
+		this.maxOpacity = 0.7;
+		this.minOpacity = 0.3;
+		this.opacityIncreaseStep = 0.005;
 		
 		this.curve = new THREE.SplineCurve();
 		this.startTime = new Date();
 
 		this.saturation = gestureLine.configGUI.config.saturation;
+		this.maxSaturation = 0.8;
+		this.minSaturation = gestureLine.configGUI.config.saturation;
 		this.colorVarious = gestureLine.configGUI.config.colorVarious;
 		this.rotationSpeed = gestureLine.configGUI.config.rotationSpeed;
 
@@ -83,7 +92,7 @@ gestureLine.angleLengthLineMorpher = (function() {
 				depthTest: false,
 				transparent: true
 			} );
-			material.lineWidth = 0.5;
+			//material.lineWidth = 0.5;
 			for (var k = 0; k < this.numPoints; k++) {
 				geometry.vertices.push( new THREE.Vector3( 0, 0, 1 ) );
 				attrs.aPosition.value[k] = new THREE.Vector3( 0, 0, 1 );
@@ -97,8 +106,9 @@ gestureLine.angleLengthLineMorpher = (function() {
 			//var mesh = new THREE.PointCloud( geometry, material );
 			this.shaderAttrs.push(attrs);
 			this.shaderUniforms.push(uniforms);
+			//mesh.scale.x = mesh.scale.y = mesh.scale.z = 3;
 			mesh.rotation.z = Math.PI / 2;
-			mesh.rotation.y += j * (Math.PI/1.3)/this.numLines;
+			mesh.rotation.y += j * (Math.PI * 0.8)/this.numLines;
 			this.meshes.push(mesh);
 
 		}
@@ -138,6 +148,37 @@ gestureLine.angleLengthLineMorpher = (function() {
 		this.ptCount = this.numPoints;
 	};
 
+	proto.increaseDisplacement = function () {
+		if (this.displacementF < this.maxDisplacementF) {
+			this.displacementF += 0.5;
+		}
+		if (this.saturation < this.maxSaturation) {
+			this.saturation += 0.01;
+		}
+
+		for (var i = 0, l = this.shaderUniforms.length; i < l; i++) {
+			if (this.shaderUniforms[i].opacity.value < this.maxOpacity) {
+				this.shaderUniforms[i].opacity.value += this.opacityIncreaseStep;
+			}
+		}
+	};
+
+	proto.decreaseDisplacement = function () {
+		if (this.displacementF > this.minDisplacementF) {
+			this.displacementF -= 0.5;
+		}
+
+		if (this.saturation > this.minSaturation) {
+			this.saturation -= 0.01;
+		}
+
+		for (var i = 0, l = this.shaderUniforms.length; i < l; i++) {
+			if (this.shaderUniforms[i].opacity.value > this.minOpacity) {
+				this.shaderUniforms[i].opacity.value -= this.opacityIncreaseStep;
+			}
+		}
+	};
+
 	proto.draw = function (x, y) {
 		if (this.bAmAnimating) {
 			if ( (gestureLine.main.millis() - this.startTimeMillis) < this.totalTimeMillis ) {
@@ -173,8 +214,8 @@ gestureLine.angleLengthLineMorpher = (function() {
 	 * p0, 1 tmp value
 	 */
 	proto.calcForward = function (pct) {
-		this.p0.x = 0.95 * this.gp0.x + 0.05 * 200.0;
-		this.p0.y = 0.95 * this.gp0.y + 0.05 * 180.0;
+		this.p0.x = (1.0 - this.tweenFactor) * this.gp0.x + this.tweenFactor * 200.0;
+		this.p0.y = (1.0 - this.tweenFactor) * this.gp0.y + this.tweenFactor * 180.0;
 
 		this.pOrig.x = this.p0.x;
 		this.pOrig.y = this.p0.y;
@@ -199,8 +240,8 @@ gestureLine.angleLengthLineMorpher = (function() {
 			this.p1.x = this.p0.x + this.lineLength * Math.cos(angleAdder);
 			this.p1.y = this.p0.y + this.lineLength * Math.sin(angleAdder);
 
-			this.pts[i].x = 0.95 * this.pts[i].x + 0.05 * this.p1.x;
-			this.pts[i].y = 0.95 * this.pts[i].y + 0.05 * this.p1.y;
+			this.pts[i].x = (1.0 - this.tweenFactor) * this.pts[i].x + this.tweenFactor * this.p1.x;
+			this.pts[i].y = (1.0 - this.tweenFactor) * this.pts[i].y + this.tweenFactor * this.p1.y;
 			this.angles[i] = angleToAdd;
 			this.p0.set(this.p1.x, this.p1.y, 1);
 		}
@@ -259,9 +300,9 @@ gestureLine.angleLengthLineMorpher = (function() {
 
 			for (var i=0; i<this.ptCount; i++) {
 				//var displacementF = 1 - Math.abs(i / this.ptCount * 2 - 1) + 0.1;
-				var displacementF = 8.0;
-				var dx = displaceLineFactor * displacementF;
-				var dy = displaceLineFactor * displacementF;
+				//var displacementF = gestureLine.configGUI.config.displacement;
+				var dx = displaceLineFactor * this.displacementF;
+				var dy = displaceLineFactor * this.displacementF;
 				var dz = 0;
 
 				var nx = this.angles[i] * 0.001;
